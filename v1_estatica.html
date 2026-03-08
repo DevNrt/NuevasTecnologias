@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>V1 – Tienda Estática | Bootstrap</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Lato:wght@300;400;700&display=swap" rel="stylesheet"/>
+  <style>
+    body { font-family: 'Lato', sans-serif; background: #f8f6f2; }
+    .navbar { background: #1a1a2e !important; }
+    .navbar-brand { font-family: 'Playfair Display', serif; font-size: 1.5rem; color: #e8c97a !important; }
+    .hero { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%); color: white; padding: 80px 0; }
+    .hero h1 { font-family: 'Playfair Display', serif; font-size: 3rem; color: #e8c97a; }
+    .card { border: none; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); overflow: hidden; transition: transform .3s; }
+    .card:hover { transform: translateY(-6px); }
+    .card-img-top { height: 240px; object-fit: cover; background: #e0e0e0; }
+    .product-img { height: 240px; display: flex; align-items: center; justify-content: center; font-size: 5rem; }
+    .badge-category { background: #0f3460; font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; }
+    .price { font-size: 1.4rem; font-weight: 700; color: #0f3460; }
+    .btn-primary { background: #0f3460; border: none; border-radius: 8px; padding: 10px 24px; font-weight: 600; }
+    .btn-primary:hover { background: #e8c97a; color: #1a1a2e; }
+    footer { background: #1a1a2e; color: #aaa; padding: 30px 0; margin-top: 60px; }
+    .section-title { font-family: 'Playfair Display', serif; font-size: 2rem; color: #1a1a2e; }
+    /* Carrito estático (solo visual) */
+    .cart-badge { background: #e8c97a; color: #1a1a2e; border-radius: 50%; padding: 2px 7px; font-size: 0.75rem; font-weight: 700; }
+  </style>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container">
+      <a class="navbar-brand" href="#">ShopCo</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navMenu">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><a class="nav-link active text-white" href="#">Inicio</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="#">Productos</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="#">Contacto</a></li>
+          <li class="nav-item ms-3">
+            <a class="nav-link text-white" href="#">
+              🛒 <span class="cart-badge">0</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero text-center">
+    <div class="container">
+      <h1>Bienvenido a ShopCo</h1>
+      <p class="lead mt-3 text-white-50">Productos de calidad, directamente a tu puerta.</p>
+      <a href="#productos" class="btn btn-warning mt-3 px-4 py-2 fw-bold">Ver productos</a>
+    </div>
+  </section>
+
+  <!-- PRODUCTOS -->
+  <section class="py-5" id="productos">
+    <div class="container">
+      <h2 class="section-title text-center mb-5">Nuestros Productos</h2>
+      <div class="row g-4 justify-content-center">
+
+        <!-- Producto 1 -->
+        <div class="col-md-5">
+          <div class="card h-100">
+            <div class="product-img bg-light">🎒</div>
+            <div class="card-body p-4">
+              <span class="badge badge-category text-white mb-2">Accesorios</span>
+              <h5 class="card-title fw-bold mt-1">Mochila Urban Pro</h5>
+              <p class="card-text text-muted">Mochila impermeable de 30L con compartimento para laptop de 15". Ideal para trabajo y viaje.</p>
+              <div class="d-flex align-items-center justify-content-between mt-3">
+                <span class="price">$189.900 COP</span>
+                <span class="text-success small">✔ En stock (12 unidades)</span>
+              </div>
+              <a href="#" class="btn btn-primary w-100 mt-3">Agregar al carrito</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Producto 2 -->
+        <div class="col-md-5">
+          <div class="card h-100">
+            <div class="product-img bg-light">🎧</div>
+            <div class="card-body p-4">
+              <span class="badge badge-category text-white mb-2">Electrónica</span>
+              <h5 class="card-title fw-bold mt-1">Audífonos BassMax X3</h5>
+              <p class="card-text text-muted">Audífonos inalámbricos con cancelación de ruido activa. Batería de 30 horas de duración.</p>
+              <div class="d-flex align-items-center justify-content-between mt-3">
+                <span class="price">$324.500 COP</span>
+                <span class="text-success small">✔ En stock (8 unidades)</span>
+              </div>
+              <a href="#" class="btn btn-primary w-100 mt-3">Agregar al carrito</a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- NOTA VERSIÓN -->
+  <div class="container mb-4">
+    <div class="alert alert-info text-center">
+      <strong>Versión 1 – Estática:</strong> Solo HTML + CSS + Bootstrap. Los botones no tienen funcionalidad real.
+      El diseño es responsivo pero sin lógica de negocio.
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="text-center">
+    <div class="container">
+      <p class="mb-0">© 2026 ShopCo · Todos los derechos reservados</p>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

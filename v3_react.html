@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>V3 – Tienda React | Full Stack SPA</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Fraunces:ital,wght@0,700;1,400&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Space Grotesk', sans-serif; background: #fafaf8; color: #1c1c1e; }
+    #root { min-height: 100vh; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- React 18 + Babel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+
+<script type="text/babel">
+const { useState, useContext, createContext, useEffect } = React;
+
+// =============================================
+// DATOS: Simulación de base de datos/API REST
+// En V3 real esto vendría de: fetch('/api/products')
+// =============================================
+const PRODUCTS_DATA = [
+  {
+    id: 1,
+    name: "Mochila Urban Pro",
+    category: "Accesorios",
+    description: "Mochila impermeable de 30L con compartimento acolchado para laptop de 15\". Fabricada con materiales reciclados y resistentes al agua.",
+    price: 189900,
+    stock: 12,
+    icon: "🎒",
+    rating: 4.8,
+    reviews: 124
+  },
+  {
+    id: 2,
+    name: "Audífonos BassMax X3",
+    category: "Electrónica",
+    description: "Audífonos over-ear inalámbricos con cancelación de ruido activa (ANC), Bluetooth 5.3 y batería de 30 horas de duración.",
+    price: 324500,
+    stock: 8,
+    icon: "🎧",
+    rating: 4.6,
+    reviews: 89
+  }
+];
+
+// =============================================
+// CONTEXT API: Estado global del carrito
+// Equivale a lo que en V3 real manejaría
+// Redux o React Context + useReducer
+// =============================================
+const CartContext = createContext();
+
+function CartProvider({ children }) {
+  const [items, setItems] = useState([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [notification, setNotification] = useState(null);
+
+  const addItem = (product) => {
+    setItems(prev => {
+      const existing = prev.find(i => i.id === product.id);
+      if (existing) return prev.map(i => i.id === product.id ? { ...i, qty: i.qty + 1 } : i);
+      return [...prev, { ...product, qty: 1 }];
+    });
+    setNotification(`${product.icon} ${product.name} agregado`);
+    setTimeout(() => setNotification(null), 2500);
+  };
+
+  const removeItem = (id) => setItems(prev => prev.filter(i => i.id !== id));
+
+  const updateQty = (id, delta) => {
+    setItems(prev =>
+      prev.map(i => i.id === id ? { ...i, qty: Math.max(0, i.qty + delta) } : i)
+          .filter(i => i.qty > 0)
+    );
+  };
+
+  const total = items.reduce((s, i) => s + i.price * i.qty, 0);
+  const count = items.reduce((s, i) => s + i.qty, 0);
+
+  return (
+    <CartContext.Provider value={{ items, addItem, removeItem, updateQty, total, count, isOpen, setIsOpen }}>
+      {children}
+      {notification && <Notification message={notification} />}
+    </CartContext.Provider>
+  );
+}
+
+// =============================================
+// COMPONENTE: Notificación flotante
+// =============================================
+function Notification({ message }) {
+  return (
+    <div style={{
+      position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)',
+      background: '#1c1c1e', color: '#a8f0c0', padding: '12px 28px', borderRadius: 30,
+      fontWeight: 600, fontSize: '0.9rem', zIndex: 9999,
+      animation: 'slideUp .3s ease', boxShadow: '0 4px 20px rgba(0,0,0,0.25)'
+    }}>
+      ✓ {message}
+    </div>
+  );
+}
+
+// =============================================
+// COMPONENTE: Navbar
+// =============================================
+function Navbar() {
+  const { count, setIsOpen } = useContext(CartContext);
+  return (
+    <nav style={{
+      background: '#1c1c1e', padding: '0 32px', height: 64,
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      position: 'sticky', top: 0, zIndex: 100
+    }}>
+      <span style={{ fontFamily: 'Fraunces, serif', fontSize: '1.5rem', color: '#a8f0c0', fontWeight: 700 }}>
+        ShopCo
+      </span>
+      <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
+        {['Inicio', 'Catálogo', 'Contacto'].map(item => (
+          <a key={item} href="#" style={{ color: '#999', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 500 }}>{item}</a>
+        ))}
+        <button
+          onClick={() => setIsOpen(true)}
+          style={{
+            background: '#2c2c2e', border: 'none', color: 'white', padding: '8px 16px',
+            borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+            fontFamily: 'Space Grotesk', fontSize: '0.9rem'
+          }}
+        >
+          🛒
+          {count > 0 && (
+            <span style={{
+              background: '#a8f0c0', color: '#1c1c1e', borderRadius: '50%',
+              width: 20, height: 20, display: 'flex', alignItems: 'center',
+              justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700
+            }}>{count}</span>
+          )}
+        </button>
+      </div>
+    </nav>
+  );
+}
+
+// =============================================
+// COMPONENTE: Hero Section
+// =============================================
+function Hero() {
+  return (
+    <section style={{
+      background: 'linear-gradient(135deg, #1c1c1e 0%, #2d2d30 100%)',
+      color: 'white', padding: '80px 32px', textAlign: 'center', position: 'relative', overflow: 'hidden'
+    }}>
+      <div style={{
+        position: 'absolute', top: '50%', left: '50%', width: 500, height: 500,
+        borderRadius: '50%', background: 'radial-gradient(circle, rgba(168,240,192,0.08) 0%, transparent 70%)',
+        transform: 'translate(-50%, -50%)', pointerEvents: 'none'
+      }}/>
+      <p style={{ color: '#a8f0c0', fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 16 }}>
+        Versión 3 · React + Context API
+      </p>
+      <h1 style={{ fontFamily: 'Fraunces, serif', fontSize: '3rem', fontWeight: 700, lineHeight: 1.2, maxWidth: 600, margin: '0 auto' }}>
+        Experiencia de compra<br/><em style={{ color: '#a8f0c0' }}>moderna y fluida</em>
+      </h1>
+      <p style={{ color: '#888', marginTop: 20, maxWidth: 500, margin: '20px auto 0' }}>
+        Arquitectura React con componentes reutilizables y estado global. En producción conectaría a una API REST en Node.js + Express.
+      </p>
+    </section>
+  );
+}
+
+// =============================================
+// COMPONENTE: Tarjeta de Producto
+// Props: product (objeto con datos del producto)
+// =============================================
+function ProductCard({ product }) {
+  const { addItem } = useContext(CartContext);
+  const [added, setAdded] = useState(false);
+
+  const handleAdd = () => {
+    addItem(product);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1500);
+  };
+
+  const stars = Array.from({ length: 5 }, (_, i) => i < Math.round(product.rating) ? '★' : '☆').join('');
+
+  return (
+    <div style={{
+      background: 'white', borderRadius: 20, overflow: 'hidden',
+      boxShadow: '0 2px 24px rgba(0,0,0,0.06)',
+      transition: 'all .3s', maxWidth: 400, width: '100%',
+      border: '2px solid transparent',
+    }}
+    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-6px)'; e.currentTarget.style.borderColor = '#a8f0c0'; e.currentTarget.style.boxShadow = '0 12px 40px rgba(168,240,192,0.2)'; }}
+    onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.boxShadow = '0 2px 24px rgba(0,0,0,0.06)'; }}
+    >
+      {/* Imagen del producto */}
+      <div style={{ height: 200, background: '#f0faf5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem' }}>
+        {product.icon}
+      </div>
+
+      <div style={{ padding: '24px' }}>
+        {/* Categoría */}
+        <span style={{
+          background: '#f0faf5', color: '#1c6b45', fontSize: '0.7rem',
+          fontWeight: 700, padding: '4px 10px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: '0.08em'
+        }}>
+          {product.category}
+        </span>
+
+        {/* Nombre */}
+        <h3 style={{ marginTop: 12, fontSize: '1.2rem', fontWeight: 700, fontFamily: 'Fraunces, serif' }}>
+          {product.name}
+        </h3>
+
+        {/* Rating */}
+        <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ color: '#f59e0b', fontSize: '0.85rem' }}>{stars}</span>
+          <span style={{ fontSize: '0.8rem', color: '#888' }}>{product.rating} ({product.reviews} reseñas)</span>
+        </div>
+
+        {/* Descripción */}
+        <p style={{ marginTop: 10, color: '#666', fontSize: '0.88rem', lineHeight: 1.6 }}>
+          {product.description}
+        </p>
+
+        {/* Precio y stock */}
+        <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '1.3rem', fontWeight: 700, color: '#1c1c1e' }}>
+            ${product.price.toLocaleString('es-CO')}
+          </span>
+          <span style={{ fontSize: '0.8rem', color: '#a8f0c0', fontWeight: 600 }}>
+            ✔ {product.stock} en stock
+          </span>
+        </div>
+
+        {/* Botón */}
+        <button
+          onClick={handleAdd}
+          style={{
+            marginTop: 16, width: '100%', padding: '12px',
+            background: added ? '#a8f0c0' : '#1c1c1e',
+            color: added ? '#1c1c1e' : 'white',
+            border: 'none', borderRadius: 12, fontWeight: 700,
+            fontSize: '0.9rem', cursor: 'pointer', transition: 'all .25s',
+            fontFamily: 'Space Grotesk'
+          }}
+        >
+          {added ? '✓ Agregado' : '+ Agregar al carrito'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// =============================================
+// COMPONENTE: Catálogo de productos
+// En V3 real: useEffect + fetch('/api/products')
+// =============================================
+function Catalog() {
+  const [products] = useState(PRODUCTS_DATA);
+  const [loading] = useState(false);
+
+  if (loading) return <div style={{ textAlign: 'center', padding: 60, color: '#888' }}>Cargando productos...</div>;
+
+  return (
+    <section style={{ padding: '60px 32px' }}>
+      <div style={{ maxWidth: 960, margin: '0 auto' }}>
+        <h2 style={{ fontFamily: 'Fraunces, serif', fontSize: '2rem', fontWeight: 700, textAlign: 'center', marginBottom: 40 }}>
+          Catálogo
+        </h2>
+        <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap', justifyContent: 'center' }}>
+          {products.map(p => <ProductCard key={p.id} product={p} />)}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// =============================================
+// COMPONENTE: Panel lateral del carrito
+// =============================================
+function CartPanel() {
+  const { items, total, count, removeItem, updateQty, isOpen, setIsOpen } = useContext(CartContext);
+
+  return (
+    <>
+      {/* Overlay */}
+      {isOpen && (
+        <div
+          onClick={() => setIsOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9997 }}
+        />
+      )}
+
+      {/* Panel */}
+      <div style={{
+        position: 'fixed', top: 0, right: isOpen ? 0 : -420,
+        width: 380, height: '100vh', background: 'white', zIndex: 9998,
+        transition: 'right .35s cubic-bezier(.4,0,.2,1)', padding: 24,
+        overflowY: 'auto', boxShadow: '-8px 0 40px rgba(0,0,0,0.15)'
+      }}>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+          <h3 style={{ fontFamily: 'Fraunces, serif', fontSize: '1.4rem' }}>
+            Carrito {count > 0 && <span style={{ fontSize: '1rem', color: '#888' }}>({count})</span>}
+          </h3>
+          <button onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer' }}>✕</button>
+        </div>
+
+        {/* Items */}
+        {items.length === 0 ? (
+          <div style={{ textAlign: 'center', color: '#aaa', marginTop: 80 }}>
+            <div style={{ fontSize: '3.5rem' }}>🛒</div>
+            <p style={{ marginTop: 12 }}>Tu carrito está vacío</p>
+          </div>
+        ) : (
+          <>
+            {items.map(item => (
+              <div key={item.id} style={{ borderBottom: '1px solid #eee', padding: '16px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontWeight: 600 }}>{item.icon} {item.name}</div>
+                  <div style={{ color: '#a8f0c0', fontWeight: 700, fontSize: '0.9rem', marginTop: 4 }}>
+                    ${(item.price * item.qty).toLocaleString('es-CO')} COP
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <button onClick={() => updateQty(item.id, -1)} style={{ background: '#f0faf5', border: 'none', width: 28, height: 28, borderRadius: 6, cursor: 'pointer', fontWeight: 700 }}>−</button>
+                  <span style={{ fontWeight: 700, minWidth: 20, textAlign: 'center' }}>{item.qty}</span>
+                  <button onClick={() => updateQty(item.id, +1)} style={{ background: '#f0faf5', border: 'none', width: 28, height: 28, borderRadius: 6, cursor: 'pointer', fontWeight: 700 }}>+</button>
+                  <button onClick={() => removeItem(item.id)} style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '1rem', marginLeft: 4 }}>🗑</button>
+                </div>
+              </div>
+            ))}
+
+            {/* Total */}
+            <div style={{ background: '#f0faf5', borderRadius: 14, padding: 20, marginTop: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '1.05rem' }}>
+                <span>Total</span>
+                <span>${total.toLocaleString('es-CO')} COP</span>
+              </div>
+              <button
+                style={{
+                  marginTop: 16, width: '100%', padding: '14px',
+                  background: '#1c1c1e', color: '#a8f0c0',
+                  border: 'none', borderRadius: 12, fontWeight: 700,
+                  fontSize: '1rem', cursor: 'pointer', fontFamily: 'Space Grotesk'
+                }}
+                onClick={() => alert('✅ En producción, esto llamaría a POST /api/orders con los items del carrito.')}
+              >
+                Proceder al pago →
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </>
+  );
+}
+
+// =============================================
+// COMPONENTE: Nota técnica
+// =============================================
+function TechNote() {
+  return (
+    <div style={{ maxWidth: 960, margin: '0 auto 40px', padding: '0 32px' }}>
+      <div style={{
+        background: '#f0faf5', border: '1px solid #a8f0c0',
+        borderRadius: 14, padding: '20px 24px', textAlign: 'center'
+      }}>
+        <strong>Versión 3 – React SPA:</strong> Componentes reutilizables, estado global con Context API, props tipadas.
+        En producción se conectaría a: <code style={{ background: '#e0f7ea', padding: '2px 6px', borderRadius: 4 }}>GET /api/products</code> y <code style={{ background: '#e0f7ea', padding: '2px 6px', borderRadius: 4 }}>POST /api/orders</code> en Node.js + Express desplegado en Azure App Service.
+      </div>
+    </div>
+  );
+}
+
+// =============================================
+// COMPONENTE RAÍZ: App
+// =============================================
+function App() {
+  return (
+    <CartProvider>
+      <Navbar />
+      <Hero />
+      <Catalog />
+      <TechNote />
+      <CartPanel />
+    </CartProvider>
+  );
+}
+
+// =============================================
+// PUNTO DE ENTRADA: Renderizado React 18
+// =============================================
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
