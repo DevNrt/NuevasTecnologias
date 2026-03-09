@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ShopCo – V3 Full Stack</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Fraunces:ital,wght@0,700;1,400&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Space Grotesk', sans-serif; background: #fafaf8; color: #1c1c1e; }
+    :root {
+      --dark: #1c1c1e; --accent: #a8f0c0; --accent2: #e8c97a;
+      --red: #ff6b6b; --soft: #f0faf5; --border: #e5e5e5;
+      --blue: #0f3460;
+    }
+    #root { min-height: 100vh; }
+    input, select, textarea {
+      font-family: 'Space Grotesk', sans-serif;
+      border: 1.5px solid var(--border); border-radius: 10px;
+      padding: 10px 14px; font-size: 0.9rem; width: 100%;
+      outline: none; transition: border-color .2s;
+      background: white;
+    }
+    input:focus, select:focus { border-color: var(--accent); }
+    label { font-size: 0.82rem; font-weight: 600; color: #555; display: block; margin-bottom: 5px; }
+    .form-group { margin-bottom: 14px; }
+    .btn {
+      font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+      border: none; border-radius: 10px; cursor: pointer;
+      padding: 11px 22px; font-size: 0.9rem; transition: all .2s;
+    }
+    .btn-primary   { background: var(--dark); color: var(--accent); }
+    .btn-primary:hover { background: #333; }
+    .btn-accent    { background: var(--accent); color: var(--dark); }
+    .btn-accent:hover  { background: #7de8a8; }
+    .btn-danger    { background: var(--red); color: white; }
+    .btn-danger:hover  { opacity: .85; }
+    .btn-outline   { background: none; border: 1.5px solid var(--dark); color: var(--dark); }
+    .btn-sm { padding: 6px 14px; font-size: 0.78rem; border-radius: 7px; }
+    .card {
+      background: white; border-radius: 18px;
+      box-shadow: 0 2px 20px rgba(0,0,0,.06); overflow: hidden;
+      border: 2px solid transparent; transition: all .3s;
+    }
+    .card:hover { border-color: var(--accent); transform: translateY(-4px); box-shadow: 0 8px 32px rgba(168,240,192,.2); }
+    .badge {
+      display: inline-block; padding: 3px 10px; border-radius: 20px;
+      font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+    }
+    .badge-green  { background: var(--soft); color: #1c6b45; }
+    .badge-blue   { background: #dce8f5; color: var(--blue); }
+    .badge-yellow { background: #fff8dc; color: #7a5c00; }
+    .badge-red    { background: #ffe5e5; color: #c1121f; }
+    .alert { border-radius: 10px; padding: 12px 16px; font-size: .88rem; margin-bottom: 12px; }
+    .alert-error   { background: #ffe5e5; color: #c1121f; border: 1px solid #ffb3b3; }
+    .alert-success { background: var(--soft); color: #1c6b45; border: 1px solid #a8f0c0; }
+    .spinner {
+      display: inline-block; width: 18px; height: 18px;
+      border: 3px solid rgba(255,255,255,.3); border-top-color: white;
+      border-radius: 50%; animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); font-size: .88rem; }
+    th { background: #f5f5f5; font-weight: 700; color: #444; font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; }
+    tr:hover td { background: #fafff8; }
+    .tag-admin  { color: var(--red); font-weight: 700; }
+    .tag-client { color: var(--blue); font-weight: 700; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+
+<script type="text/babel">
+const { useState, useContext, createContext, useEffect, useCallback } = React;
+
+// ══════════════════════════════════════════════════════════════════
+// CONFIGURACIÓN — En producción esto viene de variables de entorno
+// ══════════════════════════════════════════════════════════════════
+const API_URL = 'http://localhost:5001/api';
+
+// ══════════════════════════════════════════════════════════════════
+// API SERVICE — Centraliza todas las llamadas fetch al backend
+// ══════════════════════════════════════════════════════════════════
+const api = {
+  headers: (token) => ({
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  }),
+
+  async post(path, body, token = null) {
+    const r = await fetch(`${API_URL}${path}`, {
+      method: 'POST', headers: this.headers(token), body: JSON.stringify(body),
+    });
+    return r.json();
+  },
+
+  async get(path, token = null) {
+    const r = await fetch(`${API_URL}${path}`, { headers: this.headers(token) });
+    return r.json();
+  },
+
+  async put(path, body, token) {
+    const r = await fetch(`${API_URL}${path}`, {
+      method: 'PUT', headers: this.headers(token), body: JSON.stringify(body),
+    });
+    return r.json();
+  },
+
+  async delete(path, token) {
+    const r = await fetch(`${API_URL}${path}`, {
+      method: 'DELETE', headers: this.headers(token),
+    });
+    return r.json();
+  },
+};
+
+// ══════════════════════════════════════════════════════════════════
+// AUTH CONTEXT — Estado global de autenticación
+// ══════════════════════════════════════════════════════════════════
+const AuthContext = createContext();
+
+function AuthProvider({ children }) {
+  const [usuario, setUsuario] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('shopco_user')); } catch { return null; }
+  });
+  const [token, setToken] = useState(() => localStorage.getItem('shopco_token'));
+
+  const login = (userData, userToken) => {
+    setUsuario(userData);
+    setToken(userToken);
+    localStorage.setItem('shopco_user', JSON.stringify(userData));
+    localStorage.setItem('shopco_token', userToken);
+  };
+
+  const logout = () => {
+    setUsuario(null);
+    setToken(null);
+    localStorage.removeItem('shopco_user');
+    localStorage.removeItem('shopco_token');
+  };
+
+  const isAdmin = usuario?.rol === 'admin';
+
+  return (
+    <AuthContext.Provider value={{ usuario, token, login, logout, isAdmin }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
+// CART CONTEXT — Estado global del carrito
+// ══════════════════════════════════════════════════════════════════
+const CartContext = createContext();
+
+function CartProvider({ children }) {
+  const [items, setItems] = useState([]);
+  const [isOpen, setIsOpen] = useState(false);
+
+  const add = (product) => setItems(prev => {
+    const ex = prev.find(i => i._id === product._id);
+    return ex ? prev.map(i => i._id === product._id ? { ...i, qty: i.qty + 1 } : i)
+              : [...prev, { ...product, qty: 1 }];
+  });
+
+  const remove = (id) => setItems(prev => prev.filter(i => i._id !== id));
+
+  const updateQty = (id, delta) => setItems(prev =>
+    prev.map(i => i._id === id ? { ...i, qty: Math.max(0, i.qty + delta) } : i)
+        .filter(i => i.qty > 0)
+  );
+
+  const clear = () => setItems([]);
+
+  const total = items.reduce((s, i) => s + i.precio * i.qty, 0);
+  const count = items.reduce((s, i) => s + i.qty, 0);
+
+  return (
+    <CartContext.Provider value={{ items, add, remove, updateQty, clear, total, count, isOpen, setIsOpen }}>
+      {children}
+    </CartContext.Provider>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
+// COMPONENTES DE UI COMPARTIDOS
+// ══════════════════════════════════════════════════════════════════
+function Navbar({ page, setPage }) {
+  const { usuario, logout, isAdmin } = useContext(AuthContext);
+  const { count, setIsOpen } = useContext(CartContext);
+
+  return (
+    <nav style={{ background: 'var(--dark)', padding: '0 28px', height: 62, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 }}>
+      <span onClick={() => setPage('shop')} style={{ fontFamily: 'Fraunces,serif', fontSize: '1.5rem', color: 'var(--accent)', fontWeight: 700, cursor: 'pointer' }}>
+        ShopCo
+      </span>
+      <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+        <button onClick={() => setPage('shop')} className="btn btn-sm btn-outline" style={{ color: '#aaa', borderColor: '#444' }}>Tienda</button>
+
+        {usuario ? (
+          <>
+            {isAdmin && (
+              <button onClick={() => setPage('admin')} className="btn btn-sm" style={{ background: '#c1121f', color: 'white', borderRadius: 7 }}>
+                ⚙ Admin
+              </button>
+            )}
+            <button onClick={() => setPage('orders')} className="btn btn-sm btn-outline" style={{ color: '#aaa', borderColor: '#444' }}>
+              📋 Mis pedidos
+            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ color: '#aaa', fontSize: '.82rem' }}>
+                👤 {usuario.nombre}
+                <span style={{ marginLeft: 6 }} className={isAdmin ? 'tag-admin' : 'tag-client'}>
+                  [{usuario.rol}]
+                </span>
+              </span>
+              <button onClick={logout} className="btn btn-sm btn-outline" style={{ color: '#aaa', borderColor: '#555' }}>Salir</button>
+            </div>
+          </>
+        ) : (
+          <button onClick={() => setPage('auth')} className="btn btn-sm btn-accent">Ingresar</button>
+        )}
+
+        <button onClick={() => setIsOpen(true)} style={{ background: '#2c2c2e', border: 'none', color: 'white', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+          🛒
+          {count > 0 && (
+            <span style={{ background: 'var(--accent)', color: 'var(--dark)', borderRadius: '50%', width: 19, height: 19, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.7rem', fontWeight: 800 }}>{count}</span>
+          )}
+        </button>
+      </div>
+    </nav>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PÁGINA: LOGIN / REGISTRO
+// ══════════════════════════════════════════════════════════════════
+function AuthPage({ setPage }) {
+  const { login } = useContext(AuthContext);
+  const [modo, setModo] = useState('login');
+  const [form, setForm] = useState({ nombre: '', email: '', password: '' });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleSubmit = async () => {
+    setError(''); setLoading(true);
+    const endpoint = modo === 'login' ? '/auth/login' : '/auth/register';
+    const body = modo === 'login'
+      ? { email: form.email, password: form.password }
+      : { nombre: form.nombre, email: form.email, password: form.password };
+
+    const data = await api.post(endpoint, body);
+    setLoading(false);
+
+    if (data.token) {
+      login(data.usuario, data.token);
+      setPage('shop');
+    } else {
+      setError(data.mensaje || 'Error desconocido');
+    }
+  };
+
+  return (
+    <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div style={{ background: 'white', borderRadius: 22, padding: '40px 36px', width: '100%', maxWidth: 420, boxShadow: '0 8px 40px rgba(0,0,0,0.1)' }}>
+        <h2 style={{ fontFamily: 'Fraunces,serif', fontSize: '1.8rem', marginBottom: 6 }}>
+          {modo === 'login' ? 'Bienvenido/a 👋' : 'Crear cuenta'}
+        </h2>
+        <p style={{ color: '#888', fontSize: '.88rem', marginBottom: 28 }}>
+          {modo === 'login' ? 'Ingresa a tu cuenta para continuar' : 'Únete a ShopCo hoy mismo'}
+        </p>
+
+        {error && <div className="alert alert-error">{error}</div>}
+
+        {modo === 'register' && (
+          <div className="form-group">
+            <label>Nombre completo</label>
+            <input name="nombre" value={form.nombre} onChange={handleChange} placeholder="Tu nombre"/>
+          </div>
+        )}
+        <div className="form-group">
+          <label>Correo electrónico</label>
+          <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="tu@email.com"/>
+        </div>
+        <div className="form-group">
+          <label>Contraseña</label>
+          <input name="password" type="password" value={form.password} onChange={handleChange} placeholder="Mínimo 6 caracteres"/>
+        </div>
+
+        <button className="btn btn-primary" style={{ width: '100%', padding: 13, fontSize: '1rem', marginTop: 8 }} onClick={handleSubmit} disabled={loading}>
+          {loading ? <span className="spinner"/> : (modo === 'login' ? 'Iniciar sesión' : 'Registrarse')}
+        </button>
+
+        <p style={{ textAlign: 'center', marginTop: 20, fontSize: '.88rem', color: '#888' }}>
+          {modo === 'login' ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}
+          <button onClick={() => { setModo(modo === 'login' ? 'register' : 'login'); setError(''); }} style={{ background: 'none', border: 'none', color: 'var(--blue)', fontWeight: 700, cursor: 'pointer', marginLeft: 6, fontFamily: 'Space Grotesk' }}>
+            {modo === 'login' ? 'Regístrate' : 'Inicia sesión'}
+          </button>
+        </p>
+
+        {/* Credenciales de demo */}
+        <div style={{ marginTop: 24, background: 'var(--soft)', borderRadius: 10, padding: 14, fontSize: '.78rem' }}>
+          <strong>Cuentas de demo (con seed.js):</strong><br/>
+          Admin: admin@shopco.com / admin123<br/>
+          Cliente: cliente@shopco.com / cliente123
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PÁGINA: TIENDA
+// ══════════════════════════════════════════════════════════════════
+function ShopPage({ setPage }) {
+  const { add } = useContext(CartContext);
+  const { usuario } = useContext(AuthContext);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState('');
+
+  useEffect(() => {
+    api.get('/products').then(data => {
+      setProducts(Array.isArray(data) ? data : []);
+      setLoading(false);
+    });
+  }, []);
+
+  const handleAdd = (product) => {
+    if (!usuario) { setPage('auth'); return; }
+    add(product);
+    setToast(`✓ ${product.nombre} agregado`);
+    setTimeout(() => setToast(''), 2200);
+  };
+
+  return (
+    <div>
+      {/* Hero */}
+      <div style={{ background: 'var(--dark)', color: 'white', padding: '60px 32px', textAlign: 'center' }}>
+        <p style={{ color: 'var(--accent)', fontSize: '.78rem', fontWeight: 700, letterSpacing: '.15em', textTransform: 'uppercase', marginBottom: 12 }}>
+          V3 · React + Node.js + MongoDB + JWT
+        </p>
+        <h1 style={{ fontFamily: 'Fraunces,serif', fontSize: '2.8rem' }}>
+          Catálogo <em style={{ color: 'var(--accent)' }}>ShopCo</em>
+        </h1>
+        <p style={{ color: '#888', marginTop: 12 }}>Productos cargados desde MongoDB Atlas via API REST</p>
+      </div>
+
+      {/* Productos */}
+      <div style={{ maxWidth: 960, margin: '0 auto', padding: '50px 24px' }}>
+        <h2 style={{ fontFamily: 'Fraunces,serif', fontSize: '1.8rem', marginBottom: 36, textAlign: 'center' }}>
+          {loading ? 'Cargando...' : `${products.length} productos disponibles`}
+        </h2>
+
+        {loading ? (
+          <div style={{ textAlign: 'center', color: '#aaa', padding: 60 }}>
+            <div className="spinner" style={{ borderTopColor: 'var(--dark)', borderColor: '#ddd', width: 32, height: 32, margin: '0 auto' }}/>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', justifyContent: 'center' }}>
+            {products.map(p => (
+              <div key={p._id} className="card" style={{ width: 320 }}>
+                <div style={{ height: 190, background: 'var(--soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '4.5rem' }}>
+                  {p.icon}
+                </div>
+                <div style={{ padding: 24 }}>
+                  <span className="badge badge-green">{p.categoria}</span>
+                  <h3 style={{ marginTop: 10, fontFamily: 'Fraunces,serif', fontSize: '1.15rem' }}>{p.nombre}</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '6px 0' }}>
+                    <span style={{ color: '#f59e0b', fontSize: '.8rem' }}>{'★'.repeat(Math.round(p.rating))}{'☆'.repeat(5-Math.round(p.rating))}</span>
+                    <span style={{ fontSize: '.75rem', color: '#888' }}>{p.rating} ({p.reviews})</span>
+                  </div>
+                  <p style={{ color: '#666', fontSize: '.85rem', lineHeight: 1.55, marginBottom: 14 }}>{p.descripcion}</p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                    <span style={{ fontSize: '1.2rem', fontWeight: 700 }}>${p.precio.toLocaleString('es-CO')}</span>
+                    <span style={{ fontSize: '.78rem', color: p.stock > 0 ? '#1c6b45' : 'var(--red)', fontWeight: 600 }}>
+                      {p.stock > 0 ? `✔ ${p.stock} en stock` : '✗ Sin stock'}
+                    </span>
+                  </div>
+                  <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => handleAdd(p)} disabled={p.stock === 0}>
+                    {p.stock === 0 ? 'Sin stock' : '+ Agregar al carrito'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {toast && (
+        <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: 'var(--dark)', color: 'var(--accent)', padding: '12px 28px', borderRadius: 30, fontWeight: 600, zIndex: 9999, fontSize: '.9rem', boxShadow: '0 4px 20px rgba(0,0,0,.25)' }}>
+          {toast}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PÁGINA: MIS PEDIDOS (cliente)
+// ══════════════════════════════════════════════════════════════════
+function OrdersPage() {
+  const { token } = useContext(AuthContext);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/orders/mis-pedidos', token).then(data => {
+      setOrders(Array.isArray(data) ? data : []);
+      setLoading(false);
+    });
+  }, []);
+
+  const estadoColor = { pendiente: 'badge-yellow', procesando: 'badge-blue', enviado: 'badge-green', entregado: 'badge-green', cancelado: 'badge-red' };
+
+  return (
+    <div style={{ maxWidth: 900, margin: '0 auto', padding: '44px 24px' }}>
+      <h2 style={{ fontFamily: 'Fraunces,serif', fontSize: '1.8rem', marginBottom: 28 }}>📋 Mis Pedidos</h2>
+      {loading ? <p style={{ color: '#aaa' }}>Cargando...</p> : orders.length === 0 ? (
+        <div style={{ textAlign: 'center', color: '#aaa', padding: 60 }}>
+          <div style={{ fontSize: '3rem' }}>📦</div>
+          <p style={{ marginTop: 12 }}>Aún no tienes pedidos</p>
+        </div>
+      ) : (
+        orders.map(o => (
+          <div key={o._id} style={{ background: 'white', borderRadius: 16, padding: 22, marginBottom: 18, boxShadow: '0 2px 14px rgba(0,0,0,.06)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <div>
+                <span style={{ fontSize: '.72rem', color: '#aaa', fontFamily: 'monospace' }}>#{o._id.slice(-8).toUpperCase()}</span>
+                <p style={{ fontWeight: 700, marginTop: 2 }}>{new Date(o.createdAt).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+              </div>
+              <span className={`badge ${estadoColor[o.estado] || 'badge-blue'}`}>{o.estado}</span>
+            </div>
+            <table>
+              <thead><tr><th>Producto</th><th>Cant.</th><th>Precio unit.</th><th>Subtotal</th></tr></thead>
+              <tbody>
+                {o.items.map((item, i) => (
+                  <tr key={i}>
+                    <td>{item.nombreProducto}</td>
+                    <td>{item.cantidad}</td>
+                    <td>${item.precioUnitario.toLocaleString('es-CO')}</td>
+                    <td style={{ fontWeight: 600 }}>${item.subtotal.toLocaleString('es-CO')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ textAlign: 'right', marginTop: 12, fontWeight: 700, fontSize: '1.05rem' }}>
+              Total: ${o.total.toLocaleString('es-CO')} COP
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PÁGINA: PANEL ADMIN
+// ══════════════════════════════════════════════════════════════════
+function AdminPage() {
+  const { token } = useContext(AuthContext);
+  const [tab, setTab] = useState('products');
+  const [products, setProducts] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [form, setForm] = useState({ nombre: '', descripcion: '', precio: '', stock: '', categoria: '', icon: '📦' });
+  const [msg, setMsg] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const loadProducts = () => api.get('/products', token).then(d => setProducts(Array.isArray(d) ? d : []));
+  const loadOrders   = () => api.get('/orders', token).then(d => setOrders(Array.isArray(d) ? d : []));
+
+  useEffect(() => { loadProducts(); loadOrders(); }, []);
+
+  const handleCreate = async () => {
+    setLoading(true); setMsg('');
+    const data = await api.post('/products', { ...form, precio: +form.precio, stock: +form.stock }, token);
+    setLoading(false);
+    if (data.product) { setMsg('✅ Producto creado'); loadProducts(); setForm({ nombre: '', descripcion: '', precio: '', stock: '', categoria: '', icon: '📦' }); }
+    else setMsg('❌ ' + (data.mensaje || 'Error'));
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('¿Eliminar producto?')) return;
+    await api.delete(`/products/${id}`, token);
+    loadProducts();
+  };
+
+  const handleEstado = async (orderId, estado) => {
+    await api.put(`/orders/${orderId}/estado`, { estado }, token);
+    loadOrders();
+  };
+
+  const tabs = [
+    { id: 'products', label: '📦 Productos' },
+    { id: 'add',      label: '+ Nuevo producto' },
+    { id: 'orders',   label: '🧾 Pedidos' },
+  ];
+
+  return (
+    <div style={{ maxWidth: 1000, margin: '0 auto', padding: '44px 24px' }}>
+      <h2 style={{ fontFamily: 'Fraunces,serif', fontSize: '1.8rem', marginBottom: 6 }}>⚙ Panel de Administración</h2>
+      <p style={{ color: '#888', marginBottom: 28, fontSize: '.88rem' }}>Gestiona productos y pedidos de la tienda</p>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 28 }}>
+        {tabs.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} className="btn btn-sm"
+            style={{ background: tab === t.id ? 'var(--dark)' : '#eee', color: tab === t.id ? 'var(--accent)' : '#444' }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Lista de productos */}
+      {tab === 'products' && (
+        <div style={{ background: 'white', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 14px rgba(0,0,0,.06)' }}>
+          <table>
+            <thead><tr><th>Icono</th><th>Nombre</th><th>Precio</th><th>Stock</th><th>Categoría</th><th>Acciones</th></tr></thead>
+            <tbody>
+              {products.map(p => (
+                <tr key={p._id}>
+                  <td style={{ fontSize: '1.5rem' }}>{p.icon}</td>
+                  <td style={{ fontWeight: 600 }}>{p.nombre}</td>
+                  <td>${p.precio.toLocaleString('es-CO')}</td>
+                  <td>
+                    <span className={`badge ${p.stock > 0 ? 'badge-green' : 'badge-red'}`}>{p.stock}</span>
+                  </td>
+                  <td>{p.categoria}</td>
+                  <td>
+                    <button className="btn btn-sm btn-danger" onClick={() => handleDelete(p._id)}>Eliminar</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Crear producto */}
+      {tab === 'add' && (
+        <div style={{ background: 'white', borderRadius: 18, padding: 28, maxWidth: 520, boxShadow: '0 2px 14px rgba(0,0,0,.06)' }}>
+          <h3 style={{ fontFamily: 'Fraunces,serif', fontSize: '1.3rem', marginBottom: 22 }}>Nuevo Producto</h3>
+          {msg && <div className={`alert ${msg.startsWith('✅') ? 'alert-success' : 'alert-error'}`}>{msg}</div>}
+          {[
+            { name: 'nombre',      label: 'Nombre',      placeholder: 'Nombre del producto' },
+            { name: 'descripcion', label: 'Descripción', placeholder: 'Descripción detallada' },
+            { name: 'precio',      label: 'Precio (COP)', placeholder: '189900', type: 'number' },
+            { name: 'stock',       label: 'Stock',        placeholder: '10',    type: 'number' },
+            { name: 'categoria',   label: 'Categoría',   placeholder: 'Ej: Electrónica' },
+            { name: 'icon',        label: 'Icono emoji', placeholder: '📦' },
+          ].map(f => (
+            <div className="form-group" key={f.name}>
+              <label>{f.label}</label>
+              <input type={f.type || 'text'} value={form[f.name]} placeholder={f.placeholder}
+                onChange={e => setForm({ ...form, [f.name]: e.target.value })}/>
+            </div>
+          ))}
+          <button className="btn btn-primary" style={{ width: '100%', padding: 12 }} onClick={handleCreate} disabled={loading}>
+            {loading ? <span className="spinner"/> : 'Crear producto'}
+          </button>
+        </div>
+      )}
+
+      {/* Gestión de pedidos */}
+      {tab === 'orders' && (
+        <div style={{ background: 'white', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 14px rgba(0,0,0,.06)' }}>
+          <table>
+            <thead><tr><th>ID</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Cambiar estado</th></tr></thead>
+            <tbody>
+              {orders.map(o => (
+                <tr key={o._id}>
+                  <td style={{ fontFamily: 'monospace', fontSize: '.75rem', color: '#aaa' }}>#{o._id.slice(-8).toUpperCase()}</td>
+                  <td>
+                    <strong>{o.usuario?.nombre || '—'}</strong><br/>
+                    <span style={{ fontSize: '.75rem', color: '#888' }}>{o.usuario?.email}</span>
+                  </td>
+                  <td style={{ fontWeight: 700 }}>${o.total.toLocaleString('es-CO')}</td>
+                  <td><span className={`badge ${o.estado === 'entregado' ? 'badge-green' : o.estado === 'cancelado' ? 'badge-red' : 'badge-yellow'}`}>{o.estado}</span></td>
+                  <td>
+                    <select value={o.estado} onChange={e => handleEstado(o._id, e.target.value)} style={{ width: 'auto', padding: '5px 10px', fontSize: '.8rem' }}>
+                      {['pendiente', 'procesando', 'enviado', 'entregado', 'cancelado'].map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </td>
+                </tr>
+              ))}
+              {orders.length === 0 && <tr><td colSpan="5" style={{ textAlign: 'center', color: '#aaa', padding: 40 }}>Sin pedidos aún</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
+// CARRITO LATERAL
+// ══════════════════════════════════════════════════════════════════
+function CartPanel({ setPage }) {
+  const { items, total, count, remove, updateQty, clear, isOpen, setIsOpen } = useContext(CartContext);
+  const { token, usuario } = useContext(AuthContext);
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  const handleCheckout = async () => {
+    if (!usuario) { setIsOpen(false); setPage('auth'); return; }
+    setLoading(true); setMsg('');
+    const payload = { items: items.map(i => ({ productoId: i._id, cantidad: i.qty })) };
+    const data = await api.post('/orders', payload, token);
+    setLoading(false);
+    if (data.order) {
+      setMsg('✅ Pedido creado exitosamente');
+      clear();
+      setTimeout(() => { setMsg(''); setIsOpen(false); setPage('orders'); }, 1800);
+    } else {
+      setMsg('❌ ' + (data.mensaje || 'Error al crear pedido'));
+    }
+  };
+
+  return (
+    <>
+      {isOpen && <div onClick={() => setIsOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 9997 }}/>}
+      <div style={{ position: 'fixed', top: 0, right: isOpen ? 0 : -400, width: 370, height: '100vh', background: 'white', zIndex: 9998, transition: 'right .35s cubic-bezier(.4,0,.2,1)', padding: 24, overflowY: 'auto', boxShadow: '-8px 0 40px rgba(0,0,0,.15)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
+          <h3 style={{ fontFamily: 'Fraunces,serif', fontSize: '1.4rem' }}>Carrito {count > 0 && `(${count})`}</h3>
+          <button onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer' }}>✕</button>
+        </div>
+
+        {msg && <div className={`alert ${msg.startsWith('✅') ? 'alert-success' : 'alert-error'}`}>{msg}</div>}
+
+        {items.length === 0 ? (
+          <div style={{ textAlign: 'center', color: '#aaa', marginTop: 70 }}>
+            <div style={{ fontSize: '3.5rem' }}>🛒</div>
+            <p style={{ marginTop: 12 }}>Tu carrito está vacío</p>
+          </div>
+        ) : (
+          <>
+            {items.map(item => (
+              <div key={item._id} style={{ borderBottom: '1px solid #eee', padding: '14px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: '.9rem' }}>{item.icon} {item.nombre}</div>
+                  <div style={{ color: '#1c6b45', fontWeight: 700, fontSize: '.85rem', marginTop: 3 }}>
+                    ${(item.precio * item.qty).toLocaleString('es-CO')} COP
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <button onClick={() => updateQty(item._id, -1)} style={{ background: '#f0faf5', border: 'none', width: 27, height: 27, borderRadius: 6, cursor: 'pointer', fontWeight: 700 }}>−</button>
+                  <span style={{ fontWeight: 700, minWidth: 18, textAlign: 'center' }}>{item.qty}</span>
+                  <button onClick={() => updateQty(item._id, +1)} style={{ background: '#f0faf5', border: 'none', width: 27, height: 27, borderRadius: 6, cursor: 'pointer', fontWeight: 700 }}>+</button>
+                  <button onClick={() => remove(item._id)} style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '.95rem' }}>🗑</button>
+                </div>
+              </div>
+            ))}
+            <div style={{ background: 'var(--soft)', borderRadius: 14, padding: 18, marginTop: 18 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '1.05rem' }}>
+                <span>Total</span>
+                <span>${total.toLocaleString('es-CO')} COP</span>
+              </div>
+              <button className="btn btn-primary" style={{ width: '100%', padding: 13, marginTop: 14, fontSize: '1rem' }} onClick={handleCheckout} disabled={loading}>
+                {loading ? <span className="spinner"/> : 'Confirmar pedido →'}
+              </button>
+              {!usuario && <p style={{ fontSize: '.75rem', color: '#888', textAlign: 'center', marginTop: 8 }}>Debes iniciar sesión para pedir</p>}
+            </div>
+          </>
+        )}
+      </div>
+    </>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
+// APP RAÍZ — Enrutamiento simple por estado
+// ══════════════════════════════════════════════════════════════════
+function App() {
+  const [page, setPage] = useState('shop');
+  const { usuario, isAdmin } = useContext(AuthContext);
+
+  // Guarda: redirige si no está autenticado
+  const protectedPage = (p) => {
+    if (!usuario && (p === 'orders' || p === 'admin')) return 'auth';
+    if (p === 'admin' && !isAdmin) return 'shop';
+    return p;
+  };
+
+  const navigate = (p) => setPage(protectedPage(p));
+
+  const pages = { shop: <ShopPage setPage={navigate}/>, auth: <AuthPage setPage={navigate}/>, orders: <OrdersPage/>, admin: <AdminPage/> };
+
+  return (
+    <>
+      <Navbar page={page} setPage={navigate}/>
+      {pages[page] || <ShopPage setPage={navigate}/>}
+      <CartPanel setPage={navigate}/>
+    </>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════════════════════════
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <AuthProvider>
+    <CartProvider>
+      <App/>
+    </CartProvider>
+  </AuthProvider>
+);
+</script>
+</body>
+</html>
